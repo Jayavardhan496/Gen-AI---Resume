@@ -28,11 +28,11 @@ def get_groq_client():
 def generate_resume_content(client, user_data):
     """Generate resume content using Groq API"""
     prompt = f"""
-    Create a professional resume for the following person. Format it as clean, structured text that can be easily converted to HTML:
+    Create a professional resume for the following person. Structure it with clear sections and bullet points:
 
     Personal Information:
     - Name: {user_data['name']}
-    - Email: {user_data['email']}
+    - Email: {user_data['email']} 
     - Phone: {user_data['phone']}
     - Address: {user_data['address']}
     - LinkedIn: {user_data.get('linkedin', 'N/A')}
@@ -47,7 +47,24 @@ def generate_resume_content(client, user_data):
     
     Additional Information: {user_data.get('additional_info', 'None')}
 
-    Please create a professional, ATS-friendly resume with clear sections. Include a professional summary at the top that highlights key qualifications for the target role.
+    Please create a professional, ATS-friendly resume. Return ONLY the structured content in this exact format:
+
+    PROFESSIONAL SUMMARY
+    [Write a compelling 2-3 line professional summary highlighting key qualifications for the target role]
+
+    EDUCATION
+    [Format education details clearly]
+
+    WORK EXPERIENCE  
+    [Format work experience with company names, positions, and bullet points of achievements]
+
+    SKILLS
+    [Organize skills by category if applicable]
+
+    ADDITIONAL INFORMATION
+    [Include certifications, projects, awards if provided]
+
+    Use clear formatting with bullet points and ensure each section is well-organized.
     """
     
     try:
@@ -103,6 +120,20 @@ def generate_cover_letter(client, user_data, company_info):
 
 def create_resume_html(resume_content, user_data):
     """Convert resume content to HTML with styling"""
+    
+    # Parse the resume content into sections
+    sections = parse_resume_sections(resume_content)
+    
+    html_sections = ""
+    for section_title, section_content in sections.items():
+        formatted_content = format_section_content(section_content)
+        html_sections += f"""
+            <div class="section">
+                <div class="section-title">{section_title}</div>
+                <div class="section-content">{formatted_content}</div>
+            </div>
+        """
+    
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -130,10 +161,11 @@ def create_resume_html(resume_content, user_data):
                 margin-bottom: 30px;
             }}
             .name {{
-                font-size: 28px;
+                font-size: 32px;
                 font-weight: bold;
                 color: #2c3e50;
                 margin-bottom: 10px;
+                letter-spacing: 1px;
             }}
             .contact-info {{
                 font-size: 14px;
@@ -144,16 +176,47 @@ def create_resume_html(resume_content, user_data):
                 margin-bottom: 25px;
             }}
             .section-title {{
-                font-size: 18px;
+                font-size: 16px;
                 font-weight: bold;
                 color: #2c3e50;
                 border-bottom: 2px solid #3498db;
                 padding-bottom: 5px;
                 margin-bottom: 15px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
             }}
-            .content {{
-                white-space: pre-line;
+            .section-content {{
+                font-size: 14px;
+                line-height: 1.6;
+            }}
+            .section-content ul {{
+                margin: 10px 0;
+                padding-left: 20px;
+            }}
+            .section-content li {{
+                margin-bottom: 8px;
                 text-align: justify;
+            }}
+            .section-content p {{
+                margin-bottom: 12px;
+                text-align: justify;
+            }}
+            .work-item {{
+                margin-bottom: 20px;
+            }}
+            .job-title {{
+                font-weight: bold;
+                color: #2c3e50;
+                font-size: 15px;
+            }}
+            .company {{
+                color: #3498db;
+                font-weight: 600;
+            }}
+            .date {{
+                color: #666;
+                font-style: italic;
+                float: right;
             }}
             @media print {{
                 body {{ background-color: white; }}
@@ -168,15 +231,100 @@ def create_resume_html(resume_content, user_data):
                 <div class="contact-info">
                     {user_data['email']} | {user_data['phone']}<br>
                     {user_data['address']}
-                    {f"<br>LinkedIn: {user_data['linkedin']}" if user_data.get('linkedin') else ""}
+                    {f"<br>LinkedIn: {user_data['linkedin']}" if user_data.get('linkedin') and user_data['linkedin'].strip() else ""}
                 </div>
             </div>
-            <div class="content">{resume_content}</div>
+            {html_sections}
         </div>
     </body>
     </html>
     """
     return html_content
+
+def parse_resume_sections(resume_content):
+    """Parse resume content into sections"""
+    sections = {}
+    current_section = None
+    current_content = []
+    
+    lines = resume_content.split('\n')
+    
+    section_keywords = [
+        'PROFESSIONAL SUMMARY', 'SUMMARY', 'PROFILE',
+        'EDUCATION', 'ACADEMIC BACKGROUND',
+        'WORK EXPERIENCE', 'EXPERIENCE', 'EMPLOYMENT', 'PROFESSIONAL EXPERIENCE',
+        'SKILLS', 'TECHNICAL SKILLS', 'CORE COMPETENCIES',
+        'ADDITIONAL INFORMATION', 'CERTIFICATIONS', 'PROJECTS', 'ACHIEVEMENTS'
+    ]
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        # Check if this line is a section header
+        is_section_header = False
+        for keyword in section_keywords:
+            if keyword in line.upper() and len(line) <= 50:  # Likely a header
+                is_section_header = True
+                if current_section:
+                    sections[current_section] = '\n'.join(current_content)
+                current_section = keyword
+                current_content = []
+                break
+        
+        if not is_section_header and current_section:
+            current_content.append(line)
+    
+    # Add the last section
+    if current_section and current_content:
+        sections[current_section] = '\n'.join(current_content)
+    
+    return sections
+
+def format_section_content(content):
+    """Format section content with proper HTML"""
+    if not content.strip():
+        return "<p>Information not provided</p>"
+    
+    lines = content.split('\n')
+    formatted_lines = []
+    current_paragraph = []
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            if current_paragraph:
+                formatted_lines.append('<p>' + ' '.join(current_paragraph) + '</p>')
+                current_paragraph = []
+            continue
+            
+        # Check if line starts with bullet point indicators
+        if line.startswith(('•', '-', '*', '▪', '◦')) or line.startswith(tuple(f'{i}.' for i in range(1, 10))):
+            if current_paragraph:
+                formatted_lines.append('<p>' + ' '.join(current_paragraph) + '</p>')
+                current_paragraph = []
+            # Start or continue a list
+            if not formatted_lines or not formatted_lines[-1].endswith('</ul>'):
+                formatted_lines.append('<ul>')
+            # Clean the bullet point
+            clean_line = line[1:].strip() if line[0] in '•-*▪◦' else line[2:].strip()
+            formatted_lines.append(f'<li>{clean_line}</li>')
+        else:
+            # Close any open list
+            if formatted_lines and formatted_lines[-1].startswith('<li>'):
+                formatted_lines.append('</ul>')
+            current_paragraph.append(line)
+    
+    # Handle remaining content
+    if current_paragraph:
+        formatted_lines.append('<p>' + ' '.join(current_paragraph) + '</p>')
+    
+    # Close any unclosed list
+    if formatted_lines and formatted_lines[-1].startswith('<li>'):
+        formatted_lines.append('</ul>')
+    
+    return ''.join(formatted_lines)
 
 def create_cover_letter_html(cover_letter_content, user_data):
     """Convert cover letter to HTML with styling"""
@@ -247,26 +395,71 @@ def create_docx_resume(resume_content, user_data):
     """Create a Word document for the resume"""
     doc = Document()
     
-    # Header
-    header = doc.sections[0].header
-    header_para = header.paragraphs[0]
-    header_para.text = f"{user_data['name']} | {user_data['email']} | {user_data['phone']}"
-    header_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    # Set document margins
+    sections = doc.sections
+    for section in sections:
+        section.top_margin = Inches(1)
+        section.bottom_margin = Inches(1)
+        section.left_margin = Inches(1)
+        section.right_margin = Inches(1)
     
-    # Title
+    # Title - Name
     title = doc.add_heading(user_data['name'], 0)
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     
     # Contact info
     contact_para = doc.add_paragraph()
-    contact_para.add_run(f"{user_data['email']} | {user_data['phone']}\n{user_data['address']}")
+    contact_run = contact_para.add_run(f"{user_data['email']} | {user_data['phone']}")
     contact_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
     
-    # Add a line break
+    address_para = doc.add_paragraph()
+    address_run = address_para.add_run(user_data['address'])
+    address_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    if user_data.get('linkedin') and user_data['linkedin'].strip():
+        linkedin_para = doc.add_paragraph()
+        linkedin_run = linkedin_para.add_run(f"LinkedIn: {user_data['linkedin']}")
+        linkedin_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    # Add line break
     doc.add_paragraph()
     
-    # Resume content
-    doc.add_paragraph(resume_content)
+    # Parse and add resume sections
+    sections_dict = parse_resume_sections(resume_content)
+    
+    for section_title, section_content in sections_dict.items():
+        # Add section heading
+        heading = doc.add_heading(section_title, level=1)
+        
+        # Add section content
+        lines = section_content.split('\n')
+        current_paragraph = []
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                if current_paragraph:
+                    para = doc.add_paragraph(' '.join(current_paragraph))
+                    current_paragraph = []
+                continue
+                
+            # Check if line is a bullet point
+            if line.startswith(('•', '-', '*', '▪', '◦')) or line.startswith(tuple(f'{i}.' for i in range(1, 10))):
+                if current_paragraph:
+                    para = doc.add_paragraph(' '.join(current_paragraph))
+                    current_paragraph = []
+                # Add bullet point
+                clean_line = line[1:].strip() if line[0] in '•-*▪◦' else line[2:].strip()
+                bullet_para = doc.add_paragraph(clean_line, style='List Bullet')
+            else:
+                current_paragraph.append(line)
+        
+        # Add any remaining paragraph content
+        if current_paragraph:
+            para = doc.add_paragraph(' '.join(current_paragraph))
+        
+        # Add space after each section
+        doc.add_paragraph()
     
     # Save to bytes
     docx_buffer = io.BytesIO()
