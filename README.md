@@ -43,4 +43,68 @@ Powered by **Groq’s Llama‑3** models and built with **Streamlit**, this app 
 
 1. **Clone the repository**
    ```bash
-   git clone https://gith
+   git clone https://github.com/Jayavardhan496/Gen-AI---Resume.git
+   cd Gen-AI---Resume
+   ```
+
+2. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Set up your Groq API key**
+
+   Create a `.env` file in the root folder and add:
+
+   ```env
+   GROQ_API_KEY=your_groq_key_here
+   ```
+
+4. **Run the Streamlit app**
+   ```bash
+   streamlit run app.py
+   ```
+
+   Open in your browser at: [http://localhost:8501](http://localhost:8501)
+
+---
+
+## 📂 Project Structure
+
+<pre>
+📁 Gen-AI---Resume
+🌀️ app.py               # Main Streamlit app logic
+🌀️ requirements.txt     # Python dependencies
+🌀️ README.md            # Project documentation
+🌀️ utils/               # Resume & cover letter generation logic
+🌀️ assets/              # Logos, icons, sample templates
+</pre>
+
+---
+
+## 🛣 Roadmap
+
+- [ ] 🎨 Add multiple résumé design templates  
+- [ ] 🔗 Integrate LinkedIn auto-fill  
+- [ ] 📧 One-click email application submission  
+- [ ] 🕋 Custom fonts and themes  
+
+---
+
+## 🙌 Contribute
+
+Found a bug or want to suggest a feature?  
+Feel free to **open an issue** or **submit a pull request**. Contributions are welcome!
+
+---
+
+## ⭐ Star This Repo
+
+If this project helped you, please consider giving it a ⭐ on GitHub — it really encourages us!
+
+---
+
+## 📬 Contact
+
+Connect with me on [LinkedIn](https://linkedin.com/in/YOUR_USERNAME)  
+or check out the live app 👉 [gen-ai---resume.streamlit.app](https://gen-ai---resume.streamlit.app/)
