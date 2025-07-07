@@ -104,7 +104,4 @@ If this project helped you, please consider giving it a ⭐ on GitHub — it rea
 
 ---
 
-## 📬 Contact
 
-Connect with me on [LinkedIn](https://linkedin.com/in/YOUR_USERNAME)  
-or check out the live app 👉 [gen-ai---resume.streamlit.app](https://gen-ai---resume.streamlit.app/)
